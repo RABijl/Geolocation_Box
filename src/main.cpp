@@ -2,11 +2,13 @@
 #include <SoftwareSerial.h>
 #include <U8g2lib.h>
 #include <Wire.h>
+#include <Servo.h>
 
 
 //// config section ////
 //static const double DESTLAT = 51.889364 , DESTLON = 4.334446;
 static const double DESTLAT = 51.98931 , DESTLON = 4.34392;
+// 51.98890,4.34367
 
 static const unsigned long SERIALBAUD = 9600;
 static const int TOTALCHARS = 6;
@@ -18,8 +20,9 @@ static void ToDisplay( char * str, int sats);
 static void IntToCharArray(char * out, int len, unsigned long val, bool valid);
 static void LoadingAnimation(char * res, int len);
 static void GetSignalString(char * out,int sats);
-//// GPS ////
 
+
+//// GPS ////
 static const int RXPin = 4, TXPin = 3;
 static const unsigned long GPSBaud = 9600;
 SoftwareSerial ss(RXPin, TXPin);
@@ -29,6 +32,10 @@ TinyGPSPlus gps;
 //// LCD ////
 U8G2_SSD1306_64X32_1F_F_HW_I2C u8g2(U8G2_R2,U8X8_PIN_NONE);
 
+//// servo ////
+Servo servo;
+static const int LOCKPOS = 0, OPENPOS = 170;
+ int pos = 0, newPos = 0;
 
 void setup()
 {
@@ -36,35 +43,48 @@ void setup()
   ss.begin(GPSBaud);
   
   u8g2.begin();
+
+  servo.attach(PIN5);
+  servo.write(LOCKPOS);
+  delay(15);
 }
 
 
 void loop()
 {
   //cast to unsigned int since distance is positive and we are not interested in decimals
-   long distance= ( long) TinyGPSPlus::distanceBetween(gps.location.lat(),
+  unsigned long distance= (unsigned long) TinyGPSPlus::distanceBetween(gps.location.lat(),
                                                             gps.location.lng(),
                                                             DESTLAT,
                                                             DESTLON );
   
-  unsigned long absDist = max(0,distance - DESTPRECISION);
+  
   
   char str[TOTALCHARS +1];
-  IntToCharArray(str,TOTALCHARS, absDist, gps.location.isValid());
+  IntToCharArray(str,TOTALCHARS, distance, gps.location.isValid());
   ToDisplay(str, gps.satellites.value());
 
+  // open or close box
+  distance < DESTPRECISION ? newPos = OPENPOS: newPos = LOCKPOS; 
+  if (pos != newPos)
+  {
+    servo.write(newPos);
+    delay(30);
+    pos = newPos;
+  }
+
   // debugging purposes
-  Serial.print("distance to point: ");
-  Serial.println(distance);
-  Serial.print("number of satellites: ");
-  Serial.println(gps.satellites.value());
-  Serial.print("time: ");
-  Serial.println(gps.time.hour());
-  Serial.print("current lat and lon: ");
-  Serial.print(gps.location.lat(), 5);
-  Serial.print(",");
-  Serial.println(gps.location.lng(), 5);
-  Serial.println("--------------------------");
+  // Serial.print("distance to point: ");
+  // Serial.println(distance);
+  // Serial.print("number of satellites: ");
+  // Serial.println(gps.satellites.value());
+  // Serial.print("time: ");
+  // Serial.println(gps.time.hour());
+  // Serial.print("current lat and lon: ");
+  // Serial.print(gps.location.lat(), 5);
+  // Serial.print(",");
+  // Serial.println(gps.location.lng(), 5);
+  // Serial.println("--------------------------");
 
   smartDelay(1000);
 }
@@ -77,8 +97,12 @@ static void smartDelay(unsigned long ms)
   do 
   {
     while (ss.available())
+    {
       gps.encode(ss.read());
-  } while (millis() - start < ms);
+    }
+      
+  } 
+  while (millis() - start < ms);
 }
 
 // print to the display
@@ -147,7 +171,7 @@ static void LoadingAnimation(char * res, int len)
   {
     if(i == counter)
     {
-      res[i] = '>';
+      res[i] = '0';
     }
     else
     {
