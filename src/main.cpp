@@ -6,18 +6,19 @@
 
 //// config section ////
 static const double DESTLAT = 51.889364 , DESTLON = 4.334446;
-static const int32_t SERIALBAUD = 9600;
+static const unsigned long SERIALBAUD = 9600;
+static const int TOTALCHARS = 6;
 
 //// function headers ////
 static void smartDelay(unsigned long ms);
-static void ToDisplay(const char * str);
-static void IntToCharArray(char * out, uint32_t val, bool valid);
+static void ToDisplay(char * str);
+static void IntToCharArray(char * out, int len, unsigned long val, bool valid);
 static void LoadingAnimation(char * res, int len);
 
 //// GPS ////
 
 static const int RXPin = 4, TXPin = 3;
-static const uint32_t GPSBaud = 9600;
+static const unsigned long GPSBaud = 9600;
 SoftwareSerial ss(RXPin, TXPin);
 
 TinyGPSPlus gps;
@@ -42,8 +43,8 @@ void loop()
                                                             gps.location.lng(),
                                                             DESTLAT,
                                                             DESTLON );
-  char str[6];
-  IntToCharArray(str, distance, gps.location.isValid());
+  char str[TOTALCHARS +1];
+  IntToCharArray(str,TOTALCHARS, distance, gps.location.isValid());
 
   ToDisplay(str);
 
@@ -51,6 +52,12 @@ void loop()
   Serial.println(str);
   Serial.print("number of satellites: ");
   Serial.println(gps.satellites.value());
+  Serial.print("time: ");
+  Serial.println(gps.time.hour());
+  Serial.print("current lat and lon: ");
+  Serial.print(gps.location.lat(), 5);
+  Serial.print(",");
+  Serial.println(gps.location.lng(), 5);
 
   smartDelay(1000);
 }
@@ -68,26 +75,27 @@ static void smartDelay(unsigned long ms)
 }
 
 // print to the display
-static void ToDisplay(const char * str)
+// assuming a 64*32 display and displaying 6 chars
+static void ToDisplay( char * str)
 {
   u8g2.clearBuffer();					
-  u8g2.setFont(u8g2_font_6x10_mn);
-  u8g2.drawStr(0,10,str);
+  u8g2.setFont(u8g2_font_10x20_tn );
+  u8g2.drawStr(2,26,str);
   u8g2.sendBuffer();
 }
 
 
 // create char array to be displayed
-static void IntToCharArray(char * out, uint32_t val, bool valid)
+static void IntToCharArray(char * out, int len, unsigned long val, bool valid)
 {
-  int len = strlen(out) -1;
+  
   if (valid)
   {
-    sprintf(out, "%lx", val);
+    sprintf(out, "%.6ld", val);
   }
   else
   {
-    LoadingAnimation(out,len);
+    LoadingAnimation(out,len );
   }
 
   out[len] = 0;
@@ -111,11 +119,11 @@ static void LoadingAnimation(char * res, int len)
   {
     if(i == counter)
     {
-      res[i] = 'O';
+      res[i] = '0';
     }
     else
     {
-      res[i] = '*';
+      res[i] = '-';
     }
   }
 
