@@ -23,7 +23,7 @@ static void GetSignalString(char * out,int sats);
 
 
 //// GPS ////
-static const int RXPin = 4, TXPin = 3;
+static const int RXPin = PIN3, TXPin = PIN4;
 static const unsigned long GPSBaud = 9600;
 SoftwareSerial ss(RXPin, TXPin);
 
@@ -34,7 +34,7 @@ U8G2_SSD1306_64X32_1F_F_HW_I2C u8g2(U8G2_R2,U8X8_PIN_NONE);
 
 //// servo ////
 Servo servo;
-static const int LOCKPOS = 0, OPENPOS = 170;
+static const int LOCKPOS = 20, OPENPOS = 170;
  int pos = 0, newPos = 0;
 
 void setup()
@@ -47,6 +47,7 @@ void setup()
   servo.attach(PIN5);
   servo.write(LOCKPOS);
   delay(15);
+  Serial.println("started up box");
 }
 
 
@@ -68,6 +69,8 @@ void loop()
   distance < DESTPRECISION ? newPos = OPENPOS: newPos = LOCKPOS; 
   if (pos != newPos)
   {
+    Serial.print("new servo pos: ");
+    Serial.println(newPos);
     servo.write(newPos);
     delay(30);
     pos = newPos;
@@ -77,7 +80,7 @@ void loop()
   // Serial.print("distance to point: ");
   // Serial.println(distance);
   // Serial.print("number of satellites: ");
-  // Serial.println(gps.satellites.value());
+  Serial.println(gps.satellites.value());
   // Serial.print("time: ");
   // Serial.println(gps.time.hour());
   // Serial.print("current lat and lon: ");
@@ -87,6 +90,10 @@ void loop()
   // Serial.println("--------------------------");
 
   smartDelay(1000);
+
+  if (millis() > 5000 && gps.charsProcessed() < 10)
+    Serial.println(F("No GPS data received: check wiring"));
+
 }
 
 
