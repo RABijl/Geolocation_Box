@@ -44,7 +44,7 @@ void setup()
   
   u8g2.begin();
 
-  servo.attach(PIN5);
+  servo.attach(PIN7);
   servo.write(LOCKPOS);
   delay(15);
   Serial.println("started up box");
