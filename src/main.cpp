@@ -7,7 +7,8 @@
 
 //// config section ////
 //static const double DESTLAT = 51.889364 , DESTLON = 4.334446;
-static const double DESTLAT = 51.98931 , DESTLON = 4.34392;
+//static const double DESTLAT = 51.98931 , DESTLON = 4.34392;
+static const double DESTLAT = 51.98910639470093 , DESTLON = 4.34351465113882;
 // 51.98890,4.34367
 
 static const unsigned long SERIALBAUD = 9600;
@@ -34,8 +35,8 @@ U8G2_SSD1306_64X32_1F_F_HW_I2C u8g2(U8G2_R2,U8X8_PIN_NONE);
 
 //// servo ////
 Servo servo;
-static const int LOCKPOS = 20, OPENPOS = 170;
- int pos = 0, newPos = 0;
+static const int LOCKPOS = 80, OPENPOS = 170;
+int pos = LOCKPOS, newPos = LOCKPOS;
 
 void setup()
 {
@@ -46,8 +47,13 @@ void setup()
 
   servo.attach(PIN7);
   servo.write(LOCKPOS);
-  delay(15);
+  delay(100);
+  servo.write(LOCKPOS);
+  delay(100);
+  servo.detach();
+
   Serial.println("started up box");
+
 }
 
 
@@ -65,35 +71,44 @@ void loop()
   IntToCharArray(str,TOTALCHARS, distance, gps.location.isValid());
   ToDisplay(str, gps.satellites.value());
 
-  // open or close box
+  //open or close box
   distance < DESTPRECISION ? newPos = OPENPOS: newPos = LOCKPOS; 
   if (pos != newPos)
   {
     Serial.print("new servo pos: ");
     Serial.println(newPos);
+
+    servo.attach(PIN7);
+    delay(100);
     servo.write(newPos);
-    delay(30);
+    delay(100);
+    // send message again incase previous one wasn't received
+    servo.write(newPos);
+    delay(100);
+    servo.detach();
+
+    Serial.print("servo attached? ");
+    Serial.println(servo.attached());
+
     pos = newPos;
   }
-
-  // debugging purposes
-  // Serial.print("distance to point: ");
-  // Serial.println(distance);
-  // Serial.print("number of satellites: ");
+  
+  //debugging purposes
+  Serial.print("distance to point: ");
+  Serial.println(distance);
+  Serial.print("number of satellites: ");
   Serial.println(gps.satellites.value());
   // Serial.print("time: ");
   // Serial.println(gps.time.hour());
-  // Serial.print("current lat and lon: ");
-  // Serial.print(gps.location.lat(), 5);
-  // Serial.print(",");
-  // Serial.println(gps.location.lng(), 5);
-  // Serial.println("--------------------------");
+  Serial.print("current lat and lon: ");
+  Serial.print(gps.location.lat(), 5);
+  Serial.print(",");
+  Serial.println(gps.location.lng(), 5);
+  Serial.println("--------------------------");
 
   smartDelay(1000);
 
-  if (millis() > 5000 && gps.charsProcessed() < 10)
-    Serial.println(F("No GPS data received: check wiring"));
-
+  
 }
 
 
