@@ -16,31 +16,50 @@
 #include <Wire.h>
 #endif
 
-// Set LED_BUILTIN if it is not defined by Arduino framework
-// #define LED_BUILTIN 13
+Servo serv;
+int pos = 0;
+int newPos = 0;
+
+bool handleInp = false;
 
 void setup()
 {
   // initialize LED digital pin as an output.
   pinMode(LED_BUILTIN, OUTPUT);
+  serv.attach(PIN5);
   Serial.begin(9600);
 }
 
 void loop()
 {
-  // turn the LED on (HIGH is the voltage level)
-  digitalWrite(LED_BUILTIN, HIGH);
-  //Serial.println("led is high");
+//   // turn the LED on (HIGH is the voltage level)
+//   digitalWrite(LED_BUILTIN, HIGH);
+//   //Serial.println("led is high");
 
-  // wait for a second
-  delay(1000);
+//   // wait for a second
+//   delay(1000);
 
-  // turn the LED off by making the voltage LOW
-  digitalWrite(LED_BUILTIN, LOW);
-  Serial.println("led is low");
+//   // turn the LED off by making the voltage LOW
+//   digitalWrite(LED_BUILTIN, LOW);
+//   Serial.println("led is low");
+  
+//    // wait for a second
+//   delay(1000);
 
-   // wait for a second
-  delay(1000);
+    if (handleInp == true) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        if(newPos != pos){
+          serv.write(newPos);
+          pos = newPos;
+          delay(300);
+        }
+        handleInp = false;
+        delay(300);
+        digitalWrite(LED_BUILTIN, LOW);
+
+    }
+
+
 }
 
 String line = "";
@@ -53,8 +72,10 @@ void serialEvent()
      char ch = Serial.read();
      if(ch == '\n' ){
         Serial.println("received this: " +line);
-      line="";
-
+        newPos = line.toInt();
+        handleInp = true;
+        line="";
+        
      }else if(ch != 13){
        line += ch;
      }
