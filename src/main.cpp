@@ -8,7 +8,7 @@
 //// config section ////
 //static const double DESTLAT = 51.889364 , DESTLON = 4.334446;
 //static const double DESTLAT = 51.98931 , DESTLON = 4.34392;
-static const double DESTLAT = 51.98910639470093 , DESTLON = 4.34351465113882;
+static const double DESTLAT = 52.07856682313063 , DESTLON = 4.3037621602385;
 // 51.98890,4.34367
 
 static const unsigned long SERIALBAUD = 9600;
@@ -31,11 +31,11 @@ SoftwareSerial ss(RXPin, TXPin);
 TinyGPSPlus gps;
 
 //// LCD ////
-U8G2_SSD1306_64X32_1F_F_HW_I2C u8g2(U8G2_R2,U8X8_PIN_NONE);
+U8G2_SSD1306_64X32_1F_F_HW_I2C u8g2(U8G2_R0,U8X8_PIN_NONE);
 
 //// servo ////
 Servo servo;
-static const int LOCKPOS = 80, OPENPOS = 170;
+static const int LOCKPOS = 30, OPENPOS = 150;
 int pos = LOCKPOS, newPos = LOCKPOS;
 
 void setup()
