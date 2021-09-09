@@ -1,85 +1,197 @@
-
-
-/**
- * Blink
- *
- * Turns on an LED on for one second,
- * then off for one second, repeatedly.
- */
-#include "Arduino.h"
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+#include <U8g2lib.h>
+#include <Wire.h>
 #include <Servo.h>
 
-#ifdef U8X8_HAVE_HW_SPI
-#include <SPI.h>
-#endif
-#ifdef U8X8_HAVE_HW_I2C
-#include <Wire.h>
-#endif
+//// config section ////
+static const double DESTLAT = 52.07856682313063 , DESTLON = 4.3037621602385;
 
-Servo serv;
-int pos = 0;
-int newPos = 0;
+static const unsigned long SERIALBAUD = 9600;
+static const int TOTALCHARS = 6;
+static const unsigned int DESTPRECISION = 30;
 
-bool handleInp = false;
+//// function headers ////
+static void smartDelay(unsigned long ms);
+static void ToDisplay( char * str, int sats);
+static void IntToCharArray(char * out, int len, unsigned long val, bool valid);
+static void LoadingAnimation(char * res, int len);
+static void GetSignalString(char * out,int sats);
+
+//// GPS ////
+static const int RXPin = PIN3, TXPin = PIN4;
+static const unsigned long GPSBaud = 9600;
+SoftwareSerial ss(RXPin, TXPin);
+
+TinyGPSPlus gps;
+
+//// LCD ////
+U8G2_SSD1306_64X32_1F_F_HW_I2C u8g2(U8G2_R0,U8X8_PIN_NONE);
+
+//// servo ////
+Servo servo;
+static const int LOCKPOS = 30, OPENPOS = 150;
+int pos = LOCKPOS, newPos = LOCKPOS;
 
 void setup()
 {
-  // initialize LED digital pin as an output.
-  pinMode(LED_BUILTIN, OUTPUT);
-  serv.attach(PIN5);
-  Serial.begin(9600);
+  Serial.begin(SERIALBAUD);
+  ss.begin(GPSBaud);
+  
+  u8g2.begin();
+
+  servo.attach(PIN7);
+  servo.write(LOCKPOS);
+  delay(100);
+  servo.write(LOCKPOS);
+  delay(100);
+  servo.detach();
+
+  Serial.println("started up box");
+
 }
+
 
 void loop()
 {
-//   // turn the LED on (HIGH is the voltage level)
-//   digitalWrite(LED_BUILTIN, HIGH);
-//   //Serial.println("led is high");
-
-//   // wait for a second
-//   delay(1000);
-
-//   // turn the LED off by making the voltage LOW
-//   digitalWrite(LED_BUILTIN, LOW);
-//   Serial.println("led is low");
+  //cast to unsigned int since distance is positive and we are not interested in decimals
+  unsigned long distance= (unsigned long) TinyGPSPlus::distanceBetween(gps.location.lat(),
+                                                            gps.location.lng(),
+                                                            DESTLAT,
+                                                            DESTLON );
   
-//    // wait for a second
-//   delay(1000);
+  char str[TOTALCHARS +1];
+  IntToCharArray(str,TOTALCHARS, distance, gps.location.isValid());
+  ToDisplay(str, gps.satellites.value());
 
-    if (handleInp == true) {
-        digitalWrite(LED_BUILTIN, HIGH);
-        if(newPos != pos){
-          serv.write(newPos);
-          pos = newPos;
-          delay(300);
-        }
-        handleInp = false;
-        delay(300);
-        digitalWrite(LED_BUILTIN, LOW);
+  //open or close box
+  distance < DESTPRECISION ? newPos = OPENPOS: newPos = LOCKPOS; 
+  if (pos != newPos)
+  {
+    Serial.print("new servo pos: ");
+    Serial.println(newPos);
 
-    }
+    servo.attach(PIN7);
+    delay(100);
+    servo.write(newPos);
+    delay(100);
+    // send message again incase previous one wasn't received
+    servo.write(newPos);
+    delay(100);
+    servo.detach();
 
+    Serial.print("servo attached? ");
+    Serial.println(servo.attached());
 
+    pos = newPos;
+  }
+  
+  //debugging purposes
+  Serial.print("distance to point: ");
+  Serial.println(distance);
+  Serial.print("number of satellites: ");
+  Serial.println(gps.satellites.value());
+  // Serial.print("time: ");
+  // Serial.println(gps.time.hour());
+  Serial.print("current lat and lon: ");
+  Serial.print(gps.location.lat(), 5);
+  Serial.print(",");
+  Serial.println(gps.location.lng(), 5);
+  Serial.println("--------------------------");
+
+  smartDelay(1000);
+
+  
 }
 
-String line = "";
-void serialEvent()
+
+// make sure that gps serial is not blocked
+static void smartDelay(unsigned long ms)
+{
+  unsigned long start = millis();
+  do 
+  {
+    while (ss.available())
+    {
+      gps.encode(ss.read());
+    }
+      
+  } 
+  while (millis() - start < ms);
+}
+
+// print to the display
+// assuming a 64*32 display and displaying 6 chars
+static void ToDisplay( char * str, int sats)
+{
+  u8g2.clearBuffer();	
+  				
+  u8g2.setFont(u8g2_font_10x20_tn );
+  u8g2.drawStr(2,26,str);
+
+  if (sats >0)
+  {
+    char signal[sats + 1];
+    GetSignalString(signal,sats);
+    u8g2.setFont(u8g2_font_4x6_tn);
+    u8g2.drawStr(0,6, signal);
+  }
+
+
+  u8g2.sendBuffer();
+}
+
+static void GetSignalString(char * out,int sats)
+{
+  for(int i = 0; i < sats; i++ )
+  {
+    out[i] = '-';
+  }
+  //indicate end of string
+  out[sats]= 0;
+}
+
+
+// create char array to be displayed
+static void IntToCharArray(char * out, int len, unsigned long val, bool valid)
 {
   
-   while(Serial.available()) 
-   {
-     
-     char ch = Serial.read();
-     if(ch == '\n' ){
-        Serial.println("received this: " +line);
-        newPos = line.toInt();
-        handleInp = true;
-        line="";
-        
-     }else if(ch != 13){
-       line += ch;
-     }
+  if (valid)
+  {
+    sprintf(out, "%.6ld", val);
+  }
+  else
+  {
+    LoadingAnimation(out,len );
+  }
 
-   }
+  out[len] = 0;
 }
 
+
+// create a chare array with a moving circle to indicate system is doing something
+int counter = 0;
+static void LoadingAnimation(char * res, int len)
+{
+  if (counter > len -1)
+  {
+    counter = 0;
+  }
+  else 
+  {
+    counter++;
+  }
+
+  for (int i=0; i<len; ++i)
+  {
+    if(i == counter)
+    {
+      res[i] = '0';
+    }
+    else
+    {
+      res[i] = '-';
+    }
+  }
+
+}
