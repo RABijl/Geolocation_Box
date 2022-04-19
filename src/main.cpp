@@ -4,12 +4,8 @@
 #include <Wire.h>
 #include <Servo.h>
 
-
 //// config section ////
-//static const double DESTLAT = 51.889364 , DESTLON = 4.334446;
-//static const double DESTLAT = 51.98931 , DESTLON = 4.34392;
 static const double DESTLAT = 52.07856682313063 , DESTLON = 4.3037621602385;
-// 51.98890,4.34367
 
 static const unsigned long SERIALBAUD = 9600;
 static const int TOTALCHARS = 6;
@@ -21,7 +17,6 @@ static void ToDisplay( char * str, int sats);
 static void IntToCharArray(char * out, int len, unsigned long val, bool valid);
 static void LoadingAnimation(char * res, int len);
 static void GetSignalString(char * out,int sats);
-
 
 //// GPS ////
 static const int RXPin = PIN3, TXPin = PIN4;
@@ -64,8 +59,6 @@ void loop()
                                                             gps.location.lng(),
                                                             DESTLAT,
                                                             DESTLON );
-  
-  
   
   char str[TOTALCHARS +1];
   IntToCharArray(str,TOTALCHARS, distance, gps.location.isValid());
