@@ -17,6 +17,9 @@ The parts have been bought from local Dutch websites, but should also easily be 
 * Assortment of wires
 * PCB protoboard
 
+## Circuit Diagram
+The circuit diagram is relatively straight forward. A hardware limitation of the nano is that it does not have enough serial busses and The software serial will take control of the pwm generators, causing the servo to act sporatic. Since the servo isn't used much, the workaround is to only attach the servo once it needs to be used and disable it otherwise.
+![diagram](images/diagram.png)
 
 ## Tools
 
@@ -34,4 +37,4 @@ The parts have been bought from local Dutch websites, but should also easily be 
 * VSCode with platformIO
 * PrusaSlicer
 * TinkerCad
-* Fritzing (in the future)
+* Diagrams.net
