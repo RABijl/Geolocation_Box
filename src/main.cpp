@@ -23,7 +23,7 @@ static void GetSignalString(char *out, int sats);
 
 //// GPS ////
 static const unsigned long GPSBaud = 9600;
-SoftwareSerial ss(PIN3, PIN4); // ss(RX,TX)
+SoftwareSerial ss(PIN4, PIN3); // ss(RX,TX)
 TinyGPSPlus gps;
 
 //// LCD ////
